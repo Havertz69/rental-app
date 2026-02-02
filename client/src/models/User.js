@@ -1,33 +1,29 @@
-import db from '../lib/database.js';
+// Minimal user helpers — prefer `api.auth.me()` for current user info
 
-class User {
-  static async create(userData) {
-    const [user] = await db('users').insert(userData).returning('*');
-    return user;
-  }
-
+export default class User {
   static async findByEmail(email) {
-    const [user] = await db('users').where({ email }).first();
-    return user;
+    try {
+      const res = await fetch(`/api/users/?email=${encodeURIComponent(email)}`);
+      if (!res.ok) return null;
+      const list = await res.json();
+      return list && list.length ? list[0] : null;
+    } catch (e) {
+      return null;
+    }
   }
 
   static async findById(id) {
-    const [user] = await db('users').where({ id }).first();
-    return user;
+    try {
+      const res = await fetch(`/api/users/${id}/`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) {
+      return null;
+    }
   }
 
-  static async update(id, userData) {
-    const [user] = await db('users').where({ id }).update(userData).returning('*');
-    return user;
-  }
-
-  static async delete(id) {
-    return await db('users').where({ id }).del();
-  }
-
-  static async getAll() {
-    return await db('users').select('*');
-  }
-}
-
-export default User;
+  static async create() { throw new Error('User creation should go through backend endpoints'); }
+  static async update() { throw new Error('User update should go through backend endpoints'); }
+  static async delete() { throw new Error('User deletion should go through backend endpoints'); }
+  static async getAll() { throw new Error('Use backend endpoints'); }
+} 

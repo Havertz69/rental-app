@@ -1,44 +1,31 @@
-import knex from 'knex';
-import dotenv from 'dotenv';
+// Browser-safe stub for database access (temporary)
+// NOTE: Real DB access must happen on the backend. This stub prevents Node-only
+// libraries like `knex`/`pg` from being bundled into the browser app.
 
-// Load environment variables
-dotenv.config();
+class MockQuery {
+  constructor(table) { this.table = table; }
+  where() { return this; }
+  select() { return Promise.resolve([]); }
+  insert() { return Promise.resolve([]); }
+  returning() { return this; }
+  update() { return Promise.resolve([]); }
+  del() { return Promise.resolve(1); }
+  first() { return Promise.resolve(null); }
+  leftJoin() { return this; }
+  groupBy() { return this; }
+  orderBy() { return this; }
+  limit() { return this; }
+  raw() { return Promise.resolve(null); }
+}
 
-// Database configuration
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'rent_easy',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '',
-};
+function db(table) { return new MockQuery(table); }
 
-// Create Knex instance
-const db = knex({
-  client: 'pg',
-  connection: dbConfig,
-  migrations: {
-    directory: './src/database/migrations'
-  },
-  seeds: {
-    directory: './src/database/seeds'
-  },
-  pool: {
-    min: 2,
-    max: 10
-  }
-});
-
-// Test database connection
 export const testConnection = async () => {
-  try {
-    await db.raw('SELECT 1');
-    console.log('✅ Database connected successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
-    return false;
-  }
+  console.info('⚠️ testConnection called in browser stub (no real DB)');
+  return true;
 };
+
+db.testConnection = testConnection;
 
 export default db;
+

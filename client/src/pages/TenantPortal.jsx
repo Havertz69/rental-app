@@ -25,7 +25,7 @@ export default function TenantPortal() {
 
   useEffect(() => {
     const loadUser = async () => {
-      const userData = await base44.auth.me();
+      const userData = await api.auth.me();
       setUser(userData);
     };
     loadUser();
@@ -34,46 +34,47 @@ export default function TenantPortal() {
   const { data: tenantProfile, isLoading: loadingTenant } = useQuery({
     queryKey: ['tenant-profile', user?.email],
     queryFn: async () => {
-      const tenants = await base44.entities.Tenant.filter({ email: user.email, status: 'active' });
+      const tenants = await api.entities.Tenant.filter({ email: user.email, status: 'active' });
       return tenants[0] || null;
     },
     enabled: !!user?.email
   });
 
+  const propertyId = tenantProfile?.property ?? tenantProfile?.property_id;
   const { data: property } = useQuery({
-    queryKey: ['tenant-property', tenantProfile?.property_id],
-    queryFn: () => base44.entities.Property.filter({ id: tenantProfile.property_id }),
-    enabled: !!tenantProfile?.property_id,
-    select: (data) => data[0]
+    queryKey: ['tenant-property', propertyId],
+    queryFn: () => api.entities.Property.filter({ id: propertyId }),
+    enabled: !!propertyId,
+    select: (data) => Array.isArray(data) ? data[0] : data
   });
 
   const { data: payments = [] } = useQuery({
     queryKey: ['tenant-payments', tenantProfile?.id],
-    queryFn: () => base44.entities.Payment.filter({ tenant_id: tenantProfile.id }),
+    queryFn: () => api.entities.Payment.filter({ tenant: tenantProfile.id }),
     enabled: !!tenantProfile?.id
   });
 
   const { data: maintenanceRequests = [] } = useQuery({
     queryKey: ['tenant-maintenance', tenantProfile?.id],
-    queryFn: () => base44.entities.MaintenanceRequest.filter({ tenant_id: tenantProfile.id }),
+    queryFn: () => api.entities.MaintenanceRequest.filter({ tenant: tenantProfile.id }),
     enabled: !!tenantProfile?.id
   });
 
   const { data: announcements = [] } = useQuery({
-    queryKey: ['tenant-announcements', tenantProfile?.property_id],
+    queryKey: ['tenant-announcements', propertyId],
     queryFn: async () => {
-      const allAnnouncements = await base44.entities.Announcement.list('-created_date');
-      return allAnnouncements.filter(a => 
-        !a.property_id || a.property_id === tenantProfile.property_id
+      const allAnnouncements = await api.entities.Announcement.list();
+      return allAnnouncements.filter(a =>
+        !a.property_id || a.property_id === propertyId
       );
     },
-    enabled: !!tenantProfile?.property_id
+    enabled: !!propertyId
   });
 
   const { data: unreadMessages = [] } = useQuery({
     queryKey: ['tenant-unread-messages', tenantProfile?.id],
     queryFn: async () => {
-      const messages = await base44.entities.Message.filter({ 
+      const messages = await api.entities.Message.filter({ 
         tenant_id: tenantProfile.id,
         sender_role: 'landlord',
         read: false
@@ -106,7 +107,7 @@ export default function TenantPortal() {
             We couldn't find an active lease associated with your email ({user?.email}). 
             Please contact your property manager if you believe this is an error.
           </p>
-          <Button variant="outline" onClick={() => base44.auth.logout()}>
+          <Button variant="outline" onClick={() => api.auth.logout()}>
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out
           </Button>
@@ -180,7 +181,7 @@ export default function TenantPortal() {
                 </button>
               ))}
               <button
-                onClick={() => base44.auth.logout()}
+                onClick={() => api.auth.logout()}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors"
               >
                 <LogOut className="w-5 h-5" />
@@ -248,7 +249,7 @@ export default function TenantPortal() {
 
           <div className="mt-auto pt-6 border-t border-slate-100 mt-6">
             <button
-              onClick={() => base44.auth.logout()}
+              onClick={() => api.auth.logout()}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors"
             >
               <LogOut className="w-5 h-5" />

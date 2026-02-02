@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Calendar } from 'lucide-react';
+import { formatCurrency } from '@/utils/currency';
 
 const RevenueChart = ({ data = [], title = "Revenue Overview" }) => {
   // Calculate analytics
@@ -45,11 +46,11 @@ const RevenueChart = ({ data = [], title = "Revenue Overview" }) => {
       {/* Summary Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="text-center p-3 bg-slate-50 rounded-xl">
-          <p className="text-2xl font-bold text-slate-900">KES {totalRevenue.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-slate-900">{formatCurrency(totalRevenue)}</p>
           <p className="text-xs text-slate-500 mt-1">Total Revenue</p>
         </div>
         <div className="text-center p-3 bg-slate-50 rounded-xl">
-          <p className="text-2xl font-bold text-slate-900">KES {averageRevenue.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-slate-900">{formatCurrency(averageRevenue)}</p>
           <p className="text-xs text-slate-500 mt-1">Monthly Average</p>
         </div>
         <div className="text-center p-3 bg-slate-50 rounded-xl">
@@ -62,7 +63,7 @@ const RevenueChart = ({ data = [], title = "Revenue Overview" }) => {
       <div className="space-y-3">
         <div className="flex items-center justify-between text-sm text-slate-600">
           <span>Monthly Revenue</span>
-          <span>KES {maxRevenue.toLocaleString()}</span>
+          <span>{formatCurrency(maxRevenue)}</span>
         </div>
         <div className="space-y-2">
           {data.map((item, index) => (
@@ -91,7 +92,7 @@ const RevenueChart = ({ data = [], title = "Revenue Overview" }) => {
                 />
               </div>
               <div className="w-24 text-right text-sm font-medium text-slate-900">
-                KES {(item.amount || 0).toLocaleString()}
+                {formatCurrency(item.amount || 0)}
               </div>
             </motion.div>
           ))}

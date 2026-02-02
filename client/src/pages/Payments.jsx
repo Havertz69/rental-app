@@ -26,7 +26,7 @@ export default function Payments() {
 
   useEffect(() => {
     const loadUser = async () => {
-      const userData = await base44.auth.me();
+      const userData = await api.auth.me();
       setUser(userData);
     };
     loadUser();
@@ -41,7 +41,7 @@ export default function Payments() {
     queryKey: ['payments'],
     queryFn: async () => {
       const userData = await api.auth.me();
-      return api.entities.Payment.filter({ owner_id: userData.email }, '-due_date');
+      return api.entities.Payment.filter({ owner_id: userData.email });
     },
     enabled: !!user
   });
@@ -49,8 +49,8 @@ export default function Payments() {
   const { data: tenants = [] } = useQuery({
     queryKey: ['tenants'],
     queryFn: async () => {
-      const userData = await base44.auth.me();
-      return base44.entities.Tenant.filter({ owner_id: userData.email });
+      const userData = await api.auth.me();
+      return api.entities.Tenant.filter({ owner_id: userData.email });
     },
     enabled: !!user
   });
@@ -58,8 +58,8 @@ export default function Payments() {
   const { data: properties = [] } = useQuery({
     queryKey: ['properties'],
     queryFn: async () => {
-      const userData = await base44.auth.me();
-      return base44.entities.Property.filter({ owner_id: userData.email });
+      const userData = await api.auth.me();
+      return api.entities.Property.filter({ owner_id: userData.email });
     },
     enabled: !!user
   });
@@ -74,7 +74,8 @@ export default function Payments() {
   };
 
   const filteredPayments = payments.filter(p => {
-    const matchesSearch = getTenantName(p.tenant_id).toLowerCase().includes(searchQuery.toLowerCase());
+    const tenantId = p.tenant ?? p.tenant_id;
+    const matchesSearch = getTenantName(tenantId).toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -94,16 +95,16 @@ export default function Payments() {
 
   const handleDelete = async (payment) => {
     if (confirm('Are you sure you want to delete this payment?')) {
-      await base44.entities.Payment.delete(payment.id);
+      await api.entities.Payment.delete(payment.id);
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       toast.success('Payment deleted');
     }
   };
 
   const handleMarkPaid = async (payment) => {
-    await base44.entities.Payment.update(payment.id, { 
-      status: 'paid', 
-      paid_date: format(new Date(), 'yyyy-MM-dd')
+    await api.entities.Payment.update(payment.id, {
+      status: 'paid',
+      payment_date: format(new Date(), 'yyyy-MM-dd')
     });
     queryClient.invalidateQueries({ queryKey: ['payments'] });
     toast.success('Payment marked as paid');
@@ -249,10 +250,10 @@ export default function Payments() {
                           className="hover:bg-slate-50/50 transition-colors"
                         >
                           <td className="py-4 px-6">
-                            <p className="font-medium text-slate-900">{getTenantName(payment.tenant_id)}</p>
+                            <p className="font-medium text-slate-900">{getTenantName(payment.tenant ?? payment.tenant_id)}</p>
                           </td>
                           <td className="py-4 px-6">
-                            <p className="text-slate-600">{getPropertyName(payment.property_id)}</p>
+                            <p className="text-slate-600">{getPropertyName(payment.property ?? payment.property_id)}</p>
                           </td>
                           <td className="py-4 px-6">
                             <p className="font-bold text-slate-900">KES {payment.amount?.toLocaleString()}</p>

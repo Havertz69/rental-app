@@ -70,7 +70,7 @@ export default function PaymentForm({ payment, open, onClose, onSave }) {
     setFormData(prev => ({
       ...prev,
       tenant_id: tenantId,
-      property_id: selectedTenant?.property_id || '',
+      property_id: selectedTenant?.property ?? selectedTenant?.property_id ?? '',
       amount: selectedTenant?.monthly_rent || prev.amount
     }));
   };
@@ -79,9 +79,14 @@ export default function PaymentForm({ payment, open, onClose, onSave }) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const user = await base44.auth.me();
-    const dataToSave = { ...formData, owner_id: user.email };
-    
+    const user = await api.auth.me();
+    const dataToSave = {
+      ...formData,
+      owner_id: user.email,
+      payment_date: formData.paid_date || formData.due_date,
+      tenant: formData.tenant_id || formData.tenant,
+      property: formData.property_id || formData.property
+    };
     if (payment?.id) {
       await api.entities.Payment.update(payment.id, dataToSave);
       toast.success('Payment updated');
@@ -127,7 +132,7 @@ export default function PaymentForm({ payment, open, onClose, onSave }) {
             {selectedTenant && (
               <div className="p-3 bg-slate-50 rounded-xl text-sm">
                 <p className="text-slate-500">Property: <span className="text-slate-900 font-medium">
-                  {properties.find(p => p.id === selectedTenant.property_id)?.name || 'N/A'}
+                  {properties.find(p => p.id === (selectedTenant?.property ?? selectedTenant?.property_id))?.name || 'N/A'}
                 </span></p>
                 <p className="text-slate-500 mt-1">Monthly Rent: <span className="text-slate-900 font-medium">
                   KES {selectedTenant.monthly_rent?.toLocaleString()}

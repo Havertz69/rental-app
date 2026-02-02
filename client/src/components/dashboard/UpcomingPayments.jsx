@@ -3,10 +3,11 @@ import { motion } from 'framer-motion';
 import { format, differenceInDays, isPast } from 'date-fns';
 import { Calendar, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatCurrency } from '@/utils/currency';
 
 export default function UpcomingPayments({ payments, onMarkPaid }) {
   const getStatusInfo = (payment) => {
-    const dueDate = new Date(payment.due_date);
+    const dueDate = new Date(payment.due_date || payment.payment_date || 0);
     const daysUntilDue = differenceInDays(dueDate, new Date());
     
     if (payment.status === 'paid') {
@@ -57,7 +58,7 @@ export default function UpcomingPayments({ payments, onMarkPaid }) {
                   <p className="text-sm text-slate-500">{payment.property_name}</p>
                 </div>
                 <div className="text-right mr-4">
-                  <p className="font-bold text-slate-900">${payment.amount?.toLocaleString()}</p>
+                  <p className="font-bold text-slate-900">{formatCurrency(payment.amount)}</p>
                   <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${statusInfo.color}`}>
                     <StatusIcon className="w-3 h-3" />
                     {statusInfo.label}

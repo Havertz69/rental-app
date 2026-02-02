@@ -27,7 +27,7 @@ export default function Maintenance() {
 
   useEffect(() => {
     const loadUser = async () => {
-      const userData = await base44.auth.me();
+      const userData = await api.auth.me();
       setUser(userData);
     };
     loadUser();
@@ -75,9 +75,10 @@ export default function Maintenance() {
   };
 
   const filteredRequests = maintenance.filter(m => {
-    const matchesSearch = 
-      m.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      getPropertyName(m.property_id).toLowerCase().includes(searchQuery.toLowerCase());
+    const propId = m.property ?? m.property_id;
+    const matchesSearch =
+      (m.title ?? m.issue_description)?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      getPropertyName(propId).toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus === 'all' || m.status === filterStatus;
     const matchesPriority = filterPriority === 'all' || m.priority === filterPriority;
     return matchesSearch && matchesStatus && matchesPriority;
@@ -96,7 +97,7 @@ export default function Maintenance() {
 
   const handleDelete = async (request) => {
     if (confirm('Are you sure you want to delete this request?')) {
-      await base44.entities.MaintenanceRequest.delete(request.id);
+      await api.entities.MaintenanceRequest.delete(request.id);
       queryClient.invalidateQueries({ queryKey: ['maintenance'] });
       toast.success('Request deleted');
     }
@@ -107,7 +108,7 @@ export default function Maintenance() {
     if (newStatus === 'completed') {
       updates.completed_date = format(new Date(), 'yyyy-MM-dd');
     }
-    await base44.entities.MaintenanceRequest.update(request.id, updates);
+    await api.entities.MaintenanceRequest.update(request.id, updates);
     queryClient.invalidateQueries({ queryKey: ['maintenance'] });
     toast.success('Status updated');
   };
@@ -269,9 +270,9 @@ export default function Maintenance() {
                                 <MapPin className="w-4 h-4" />
                                 {getPropertyName(request.property_id)}
                               </span>
-                              {getTenantName(request.tenant_id) && (
+                              {getTenantName(request.tenant ?? request.tenant_id) && (
                                 <span className="text-sm text-slate-400">
-                                  • {getTenantName(request.tenant_id)}
+                                  • {getTenantName(request.tenant ?? request.tenant_id)}
                                 </span>
                               )}
                             </div>

@@ -57,24 +57,31 @@ import Documents from './pages/Documents.jsx';
 import TenantPortal from './pages/TenantPortal.jsx';
 import Announcements from './pages/Announcements.jsx';
 import Messages from './pages/Messages.jsx';
+import UserDashboard from './pages/UserDashboard.jsx';
+import UserManagement from './pages/UserManagement.jsx';
+import LandingPage from './pages/LandingPage.jsx';
+import AdminDashboard from './pages/AdminDashboard.jsx';
 import __Layout from './Layout.jsx';
 
-
 export const PAGES = {
-    "Dashboard": Dashboard,
-    "Properties": Properties,
-    "Tenants": Tenants,
-    "Payments": Payments,
-    "Maintenance": Maintenance,
-    "Assistant": Assistant,
-    "Documents": Documents,
-    "TenantPortal": TenantPortal,
-    "Announcements": Announcements,
-    "Messages": Messages,
-}
+  "LandingPage": LandingPage,
+  "Dashboard": Dashboard,
+  "AdminDashboard": AdminDashboard,
+  "Properties": Properties,
+  "Tenants": Tenants,
+  "Payments": Payments,
+  "Maintenance": Maintenance,
+  "Assistant": Assistant,
+  "Documents": Documents,
+  "TenantPortal": TenantPortal,
+  "Announcements": Announcements,
+  "Messages": Messages,
+  "UserDashboard": UserDashboard,
+  "UserManagement": UserManagement,
+};
 
 export const pagesConfig = {
-    mainPage: "Dashboard",
-    Pages: PAGES,
-    Layout: __Layout,
+  mainPage: "LandingPage",
+  Pages: PAGES,
+  Layout: __Layout,
 };

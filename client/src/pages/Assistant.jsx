@@ -7,7 +7,7 @@ import {
   Bot, Send, Plus, MessageSquare, Trash2, Sparkles, 
   Loader2, Building2, Users, DollarSign, Wrench
 } from 'lucide-react';
-import MessageBubble from '@/components/chat/MessageBubble.jsx';
+import MessageBubble from '@/components/chat/messageBubble.jsx';
 import { toast } from 'react-hot-toast';
 
 const suggestionCards = [
@@ -57,7 +57,7 @@ export default function Assistant() {
   useEffect(() => {
     if (!currentConversation) return;
     
-    const unsubscribe = base44.agents.subscribeToConversation(currentConversation.id, (data) => {
+    const unsubscribe = api.agents.subscribeToConversation(currentConversation.id, (data) => {
       setMessages(data.messages || []);
     });
 
@@ -66,13 +66,13 @@ export default function Assistant() {
 
   const loadConversations = async () => {
     setIsLoading(true);
-    const convs = await base44.agents.listConversations({ agent_name: 'rental_assistant' });
+    const convs = await api.agents.listConversations({ agent_name: 'rental_assistant' });
     setConversations(convs || []);
     setIsLoading(false);
   };
 
   const createNewConversation = async () => {
-    const conv = await base44.agents.createConversation({
+    const conv = await api.agents.createConversation({
       agent_name: 'rental_assistant',
       metadata: {
         name: `Chat ${new Date().toLocaleDateString()}`
@@ -84,7 +84,7 @@ export default function Assistant() {
   };
 
   const selectConversation = async (conv) => {
-    const fullConv = await base44.agents.getConversation(conv.id);
+    const fullConv = await api.agents.getConversation(conv.id);
     setCurrentConversation(fullConv);
     setMessages(fullConv.messages || []);
   };

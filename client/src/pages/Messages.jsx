@@ -29,26 +29,26 @@ export default function Messages() {
 
   const { data: tenants = [] } = useQuery({
     queryKey: ['tenants', user?.email],
-    queryFn: () => base44.entities.Tenant.filter({ owner_id: user.email, status: 'active' }),
+    queryFn: () => api.entities.Tenant.filter({ owner_id: user.email, status: 'active' }),
     enabled: !!user?.email
   });
 
   const { data: properties = [] } = useQuery({
     queryKey: ['properties', user?.email],
-    queryFn: () => base44.entities.Property.filter({ owner_id: user.email }),
+    queryFn: () => api.entities.Property.filter({ owner_id: user.email }),
     enabled: !!user?.email
   });
 
   const { data: allMessages = [] } = useQuery({
     queryKey: ['messages', user?.email],
-    queryFn: () => base44.entities.Message.filter({ owner_id: user.email }),
+    queryFn: () => api.entities.Message.filter({ owner_id: user.email }),
     enabled: !!user?.email,
     refetchInterval: 10000
   });
 
   const { data: conversationMessages = [] } = useQuery({
     queryKey: ['conversation-messages', selectedTenant?.id],
-    queryFn: () => base44.entities.Message.filter({ tenant_id: selectedTenant.id }),
+    queryFn: () => api.entities.Message.filter({ tenant_id: selectedTenant.id }),
     enabled: !!selectedTenant?.id,
     refetchInterval: 5000
   });
@@ -66,7 +66,7 @@ export default function Messages() {
       if (!selectedTenant) return;
       const unreadMessages = conversationMessages.filter(m => m.sender_role === 'tenant' && !m.read);
       for (const msg of unreadMessages) {
-        await base44.entities.Message.update(msg.id, { read: true });
+        await api.entities.Message.update(msg.id, { read: true });
       }
       if (unreadMessages.length > 0) {
         queryClient.invalidateQueries({ queryKey: ['messages'] });
@@ -95,7 +95,7 @@ export default function Messages() {
     if (!newMessage.trim() || !selectedTenant) return;
 
     setIsSending(true);
-    await base44.entities.Message.create({
+    await api.entities.Message.create({
       tenant_id: selectedTenant.id,
       property_id: selectedTenant.property_id,
       sender_email: user.email,
@@ -140,7 +140,7 @@ export default function Messages() {
                 filteredTenants.map(tenant => {
                   const unreadCount = getUnreadCount(tenant.id);
                   const lastMessage = getLastMessage(tenant.id);
-                  const property = properties.find(p => p.id === tenant.property_id);
+                  const property = properties.find(p => p.id === (tenant.property ?? tenant.property_id));
 
                   return (
                     <button

@@ -135,8 +135,13 @@ export default function PropertyForm({ property, open, onClose, onSave }) {
     setIsSubmitting(true);
 
     const user = await api.auth.me();
-    const dataToSave = { ...formData, owner_id: user.email };
-    
+    const dataToSave = {
+      ...formData,
+      owner_id: user.email,
+      price: formData.monthly_rent ?? formData.price,
+      location: formData.address ?? formData.location,
+      available: formData.status != null ? formData.status === 'available' : (formData.available ?? true)
+    };
     if (property?.id) {
       await api.entities.Property.update(property.id, dataToSave);
       toast.success('Property updated');

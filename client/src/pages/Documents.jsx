@@ -47,7 +47,7 @@ export default function Documents() {
 
   useEffect(() => {
     const loadUser = async () => {
-      const userData = await base44.auth.me();
+      const userData = await api.auth.me();
       setUser(userData);
     };
     loadUser();
@@ -57,7 +57,7 @@ export default function Documents() {
     queryKey: ['documents'],
     queryFn: async () => {
       const userData = await api.auth.me();
-      return api.entities.Document ? api.entities.Document.filter({ owner_id: userData.email }, '-created_date') : [];
+      return api.entities.Document ? api.entities.Document.filter({ owner_id: userData.email }) : [];
     },
     enabled: !!user
   });
@@ -105,7 +105,7 @@ export default function Documents() {
     setIsUploading(true);
     try {
       const { file_url } = await api.integrations.Core.UploadFile({ file: selectedFile });
-      const user = await base44.auth.me();
+      const user = await api.auth.me();
       
       if (api.entities.Document) await api.entities.Document.create({
         ...uploadData,
@@ -133,7 +133,7 @@ export default function Documents() {
 
   const handleDelete = async (doc) => {
     if (confirm('Delete this document?')) {
-      await base44.entities.Document.delete(doc.id);
+      await api.entities.Document.delete(doc.id);
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       toast.success('Document deleted');
     }

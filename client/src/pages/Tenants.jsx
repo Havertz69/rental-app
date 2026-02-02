@@ -26,7 +26,7 @@ export default function Tenants() {
 
   useEffect(() => {
     const loadUser = async () => {
-      const userData = await base44.auth.me();
+      const userData = await api.auth.me();
       setUser(userData);
     };
     loadUser();
@@ -40,8 +40,8 @@ export default function Tenants() {
   const { data: tenants = [], isLoading } = useQuery({
     queryKey: ['tenants'],
     queryFn: async () => {
-      const userData = await base44.auth.me();
-      return base44.entities.Tenant.filter({ owner_id: userData.email }, '-created_date');
+      const userData = await api.auth.me();
+      return api.entities.Tenant.filter({ owner_id: userData.email });
     },
     enabled: !!user
   });
@@ -49,8 +49,8 @@ export default function Tenants() {
   const { data: properties = [] } = useQuery({
     queryKey: ['properties'],
     queryFn: async () => {
-      const userData = await base44.auth.me();
-      return base44.entities.Property.filter({ owner_id: userData.email });
+      const userData = await api.auth.me();
+      return api.entities.Property.filter({ owner_id: userData.email });
     },
     enabled: !!user
   });
@@ -65,7 +65,7 @@ export default function Tenants() {
 
   const handleDelete = async (tenant) => {
     if (confirm('Are you sure you want to delete this tenant?')) {
-      await base44.entities.Tenant.delete(tenant.id);
+      await api.entities.Tenant.delete(tenant.id);
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       toast.success('Tenant deleted');
     }
@@ -190,7 +190,7 @@ export default function Tenants() {
           <div className="space-y-4">
             <AnimatePresence>
               {filteredTenants.map((tenant, index) => {
-                const property = properties.find(p => p.id === tenant.property_id);
+                const property = properties.find(p => p.id === (tenant.property ?? tenant.property_id));
                 const leaseStatus = getLeaseStatus(tenant);
                 
                 return (

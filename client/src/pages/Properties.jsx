@@ -25,7 +25,7 @@ export default function Properties() {
 
   useEffect(() => {
     const loadUser = async () => {
-      const userData = await base44.auth.me();
+      const userData = await api.auth.me();
       setUser(userData);
     };
     loadUser();
@@ -40,7 +40,7 @@ export default function Properties() {
     queryKey: ['properties'],
     queryFn: async () => {
       const userData = await api.auth.me();
-      return api.entities.Property.filter({ owner_id: userData.email }, '-created_date');
+      return api.entities.Property.filter({ owner_id: userData.email });
     },
     enabled: !!user
   });

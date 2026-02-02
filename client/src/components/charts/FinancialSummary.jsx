@@ -1,39 +1,43 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CreditCard, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from 'lucide-react';
+import { formatCurrency } from '@/utils/currency';
 
-const FinancialSummary = ({ payments = [], properties = [] }) => {
-  // Calculate financial metrics
+const FinancialSummary = ({ payments = [], properties = [], paymentMethods: paymentMethodsProp, revenueStats }) => {
   const currentMonth = new Date();
   const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
   const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-  
+
+  const dateForPayment = (p) => p.payment_date || p.created_date || p.paid_date;
   const currentMonthPayments = payments.filter(p => {
-    const paymentDate = new Date(p.created_date);
+    const d = dateForPayment(p);
+    if (!d) return false;
+    const paymentDate = new Date(d);
     return paymentDate >= monthStart && paymentDate <= monthEnd;
   });
-  
+
   const paidPayments = payments.filter(p => p.status === 'paid');
   const pendingPayments = payments.filter(p => p.status === 'pending');
   const latePayments = payments.filter(p => p.status === 'late');
-  
+
   const currentMonthRevenue = currentMonthPayments
     .filter(p => p.status === 'paid')
     .reduce((sum, p) => sum + (p.amount || 0), 0);
-  
+
   const totalCollected = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
   const totalPending = pendingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
   const totalOverdue = latePayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-  
-  // Calculate monthly potential income
-  const monthlyPotential = properties.reduce((sum, p) => sum + (p.monthly_rent || 0), 0);
+
+  const monthlyPotential = properties.reduce((sum, p) => sum + (p.monthly_rent || p.price || 0), 0);
   const collectionRate = monthlyPotential > 0 ? (currentMonthRevenue / monthlyPotential) * 100 : 0;
-  
-  // Payment method breakdown
-  const paymentMethods = paidPayments.reduce((acc, p) => {
-    acc[p.payment_method] = (acc[p.payment_method] || 0) + (p.amount || 0);
-    return acc;
-  }, {});
+
+  const paymentMethods = paymentMethodsProp && typeof paymentMethodsProp === 'object' && Object.keys(paymentMethodsProp).length > 0
+    ? paymentMethodsProp
+    : paidPayments.reduce((acc, p) => {
+        const key = p.payment_type || p.payment_method || 'other';
+        acc[key] = (acc[key] || 0) + (p.amount || 0);
+        return acc;
+      }, {});
   
   return (
     <motion.div
@@ -66,7 +70,7 @@ const FinancialSummary = ({ payments = [], properties = [] }) => {
             <CheckCircle className="w-5 h-5 text-emerald-600" />
             <span className="text-xs text-emerald-700 font-medium">Collected</span>
           </div>
-          <p className="text-xl font-bold text-emerald-700">KES {totalCollected.toLocaleString()}</p>
+          <p className="text-xl font-bold text-emerald-700">{formatCurrency(totalCollected)}</p>
           <p className="text-xs text-emerald-600 mt-1">{paidPayments.length} payments</p>
         </motion.div>
 
@@ -80,7 +84,7 @@ const FinancialSummary = ({ payments = [], properties = [] }) => {
             <AlertCircle className="w-5 h-5 text-amber-600" />
             <span className="text-xs text-amber-700 font-medium">Pending</span>
           </div>
-          <p className="text-xl font-bold text-amber-700">KES {totalPending.toLocaleString()}</p>
+          <p className="text-xl font-bold text-amber-700">{formatCurrency(totalPending)}</p>
           <p className="text-xs text-amber-600 mt-1">{pendingPayments.length} payments</p>
         </motion.div>
 
@@ -94,7 +98,7 @@ const FinancialSummary = ({ payments = [], properties = [] }) => {
             <TrendingDown className="w-5 h-5 text-rose-600" />
             <span className="text-xs text-rose-700 font-medium">Overdue</span>
           </div>
-          <p className="text-xl font-bold text-rose-700">KES {totalOverdue.toLocaleString()}</p>
+          <p className="text-xl font-bold text-rose-700">{formatCurrency(totalOverdue)}</p>
           <p className="text-xs text-rose-600 mt-1">{latePayments.length} payments</p>
         </motion.div>
 
@@ -132,9 +136,9 @@ const FinancialSummary = ({ payments = [], properties = [] }) => {
                 </span>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold text-slate-900">KES {amount.toLocaleString()}</p>
+                <p className="text-sm font-bold text-slate-900">{formatCurrency(amount)}</p>
                 <p className="text-xs text-slate-500">
-                  {((amount / totalCollected) * 100).toFixed(1)}% of total
+                  {totalCollected ? ((amount / totalCollected) * 100).toFixed(1) : 0}% of total
                 </p>
               </div>
             </motion.div>
@@ -147,11 +151,11 @@ const FinancialSummary = ({ payments = [], properties = [] }) => {
         <h4 className="text-sm font-semibold text-slate-900 mb-3">Monthly Performance</h4>
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center p-3 bg-slate-50 rounded-xl">
-            <p className="text-lg font-bold text-slate-900">KES {currentMonthRevenue.toLocaleString()}</p>
+            <p className="text-lg font-bold text-slate-900">{formatCurrency(currentMonthRevenue)}</p>
             <p className="text-xs text-slate-500 mt-1">Current Month</p>
           </div>
           <div className="text-center p-3 bg-slate-50 rounded-xl">
-            <p className="text-lg font-bold text-slate-900">KES {monthlyPotential.toLocaleString()}</p>
+            <p className="text-lg font-bold text-slate-900">{formatCurrency(monthlyPotential)}</p>
             <p className="text-xs text-slate-500 mt-1">Potential Income</p>
           </div>
         </div>

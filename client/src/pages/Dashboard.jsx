@@ -13,6 +13,7 @@ import PropertyPerformanceChart from '@/components/charts/PropertyPerformanceCha
 import FinancialSummary from '@/components/charts/FinancialSummary';
 import { toast } from 'react-hot-toast';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { formatCurrency, formatWholeNumber } from '@/utils/currency';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -20,7 +21,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const loadUser = async () => {
-      const userData = await base44.auth.me();
+      const userData = await api.auth.me();
       setUser(userData);
     };
     loadUser();
@@ -85,77 +86,88 @@ export default function Dashboard() {
 
   const { data: maintenance = [] } = useQuery({
     queryKey: ['maintenance'],
-    queryFn: async () => {
-      const userData = await api.auth.me();
-      return api.entities.MaintenanceRequest.filter({ owner_id: userData.email }, '-created_date');
-    },
+    queryFn: () => api.entities.MaintenanceRequest.filter({}),
     enabled: !!user
   });
 
+  // Defensive defaults: some backend endpoints may return null instead of an empty array.
+  const safeProperties = properties ?? [];
+  const safeTenants = tenants ?? [];
+  const safePayments = payments ?? [];
+  const safeMaintenance = maintenance ?? []; 
+
   // Calculate stats
-  const activeTenants = tenants.filter(t => t.status === 'active');
-  const occupiedProperties = properties.filter(p => p.status === 'occupied');
-  const occupancyRate = properties.length > 0 
-    ? Math.round((occupiedProperties.length / properties.length) * 100) 
+  const activeTenants = safeTenants.filter(t => t?.status === 'active');
+  const occupiedProperties = safeProperties.filter(p => p?.status === 'occupied');
+  const occupancyRate = safeProperties.length > 0 
+    ? Math.round((occupiedProperties.length / safeProperties.length) * 100) 
     : 0;
 
   const currentMonth = new Date();
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   
-  const monthlyRevenue = payments
-    .filter(p => p.status === 'paid' && p.paid_date && 
-      isWithinInterval(new Date(p.paid_date), { start: monthStart, end: monthEnd }))
-    .reduce((sum, p) => sum + (p.amount || 0), 0);
+  const monthlyRevenue = safePayments
+    .filter(p => p?.status === 'paid' && (p.paid_date || p.payment_date) &&
+      isWithinInterval(new Date(p.paid_date || p.payment_date), { start: monthStart, end: monthEnd }))
+    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-  const pendingMaintenance = maintenance.filter(m => 
-    m.status !== 'completed' && m.status !== 'cancelled'
+  const pendingMaintenance = safeMaintenance.filter(m => 
+    m?.status !== 'completed' && m?.status !== 'cancelled'
   );
 
-  // Prepare upcoming payments
-  const upcomingPayments = payments
-    .filter(p => p.status !== 'paid')
+  // Prepare upcoming payments (tenant/property may be IDs from API)
+  const upcomingPayments = safePayments
+    .filter(p => p?.status !== 'paid')
     .map(payment => {
-      const tenant = tenants.find(t => t.id === payment.tenant_id);
-      const property = properties.find(p => p.id === payment.property_id);
+      const tenantId = payment.tenant?.id ?? payment.tenant;
+      const propertyId = payment.property?.id ?? payment.property;
+      const tenant = safeTenants.find(t => t.id === tenantId);
+      const property = safeProperties.find(p => p.id === propertyId);
       return {
         ...payment,
+        due_date: payment.due_date ?? payment.payment_date,
         tenant_name: tenant ? `${tenant.first_name} ${tenant.last_name}` : 'Unknown',
         property_name: property?.name || 'Unknown'
       };
     })
     .slice(0, 5);
 
-  // Prepare maintenance overview
-  const maintenanceWithProperty = maintenance.map(m => ({
-    ...m,
-    property_name: properties.find(p => p.id === m.property_id)?.name || 'Unknown'
-  }));
+  const maintenanceWithProperty = safeMaintenance.map(m => {
+    const propId = m.property?.id ?? m.property;
+    return { ...m, property_name: safeProperties.find(p => p.id === propId)?.name || 'Unknown' };
+  });
 
-  // Build recent activity
   const recentActivity = [
-    ...payments.slice(0, 5).map(p => ({
-      id: `payment-${p.id}`,
-      type: 'payment',
-      title: `${tenants.find(t => t.id === p.tenant_id)?.first_name || 'Unknown'} - KES ${p.amount}`,
-      description: properties.find(prop => prop.id === p.property_id)?.name || '',
-      date: p.created_date,
-      status: p.status
-    })),
-    ...maintenance.slice(0, 5).map(m => ({
-      id: `maintenance-${m.id}`,
-      type: 'maintenance',
-      title: m.title,
-      description: properties.find(p => p.id === m.property_id)?.name || '',
-      date: m.created_date,
-      status: m.status
-    }))
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 8);
+    ...safePayments.slice(0, 5).map(p => {
+      const t = safeTenants.find(t => t.id === (p.tenant?.id ?? p.tenant));
+      const prop = safeProperties.find(prop => prop.id === (p.property?.id ?? p.property));
+      return {
+        id: `payment-${p.id}`,
+        type: 'payment',
+        title: `${t?.first_name || 'Unknown'} - ${formatCurrency(p.amount)}`,
+        description: prop?.name || '',
+        date: p.created_date ?? p.payment_date,
+        status: p.status
+      };
+    }),
+    ...safeMaintenance.slice(0, 5).map(m => {
+      const prop = safeProperties.find(p => p.id === (m.property?.id ?? m.property));
+      return {
+        id: `maintenance-${m.id}`,
+        type: 'maintenance',
+        title: m.title ?? m.issue_description ?? '',
+        description: prop?.name || '',
+        date: m.created_date ?? m.created_at,
+        status: m.status
+      };
+    })
+  ].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()).slice(0, 8);
 
   const handleMarkPaid = async (paymentId) => {
-    await api.entities.Payment.update(paymentId, { 
-      status: 'paid', 
-      paid_date: format(new Date(), 'yyyy-MM-dd') 
+    await api.entities.Payment.update(paymentId, {
+      status: 'paid',
+      payment_date: format(new Date(), 'yyyy-MM-dd')
     });
     queryClient.invalidateQueries({ queryKey: ['payments'] });
     toast.success('Payment marked as paid');
@@ -196,7 +208,7 @@ export default function Dashboard() {
           />
           <StatCard
             title="Monthly Revenue"
-            value={`KES ${monthlyRevenue.toLocaleString()}`}
+            value={formatWholeNumber(monthlyRevenue)}
             subtitle={format(currentMonth, 'MMMM yyyy')}
             icon={CreditCard}
             color="emerald"
@@ -226,13 +238,13 @@ export default function Dashboard() {
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <RevenueChart data={monthlyRevenueData} />
-            <PropertyPerformanceChart properties={properties} payments={payments} />
+            <PropertyPerformanceChart properties={safeProperties} payments={safePayments} />
           </div>
         </div>
 
         {/* Financial Summary */}
         <div className="mb-8">
-          <FinancialSummary payments={payments} properties={properties} paymentMethods={paymentMethods} revenueStats={revenueStats} />
+          <FinancialSummary payments={safePayments} properties={safeProperties} paymentMethods={paymentMethods} revenueStats={revenueStats} />
         </div>
 
         {/* Main Content Grid */}
@@ -251,11 +263,11 @@ export default function Dashboard() {
             <div className="bg-white rounded-2xl border border-slate-100 p-6">
               <h2 className="text-lg font-semibold text-slate-900 mb-4">Property Status</h2>
               <div className="space-y-3">
-                {properties.slice(0, 4).map(property => (
+                {safeProperties.slice(0, 4).map(property => (
                   <div key={property.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                     <div>
                       <p className="font-medium text-slate-900">{property.name}</p>
-                      <p className="text-sm text-slate-500">{property.address}</p>
+                      <p className="text-sm text-slate-500">{property.address ?? property.location}</p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                       property.status === 'occupied' ? 'bg-emerald-100 text-emerald-700' :
@@ -267,7 +279,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                 ))}
-                {properties.length === 0 && (
+                {safeProperties.length === 0 && (
                   <div className="text-center py-6 text-slate-400">
                     <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p>No properties yet</p>

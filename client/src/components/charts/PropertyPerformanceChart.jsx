@@ -5,7 +5,7 @@ import { Building2, TrendingUp, Users, CreditCard } from 'lucide-react';
 const PropertyPerformanceChart = ({ properties = [], payments = [] }) => {
   // Calculate performance metrics for each property
   const propertyMetrics = properties.map(property => {
-    const propertyPayments = payments.filter(p => p.property_id === property.id && p.status === 'paid');
+    const propertyPayments = payments.filter(p => (p.property ?? p.property_id) === property.id && p.status === 'paid');
     const totalRevenue = propertyPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
     const occupancyRate = property.status === 'occupied' ? 100 : 0;
     

@@ -71,7 +71,7 @@ export default function TenantMaintenance({ tenant, property, requests }) {
     if (!file) return;
     
     setUploadingImage(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await api.integrations.Core.UploadFile({ file });
     setFormData(prev => ({ ...prev, images: [...prev.images, file_url] }));
     toast.success('Image uploaded');
     setUploadingImage(false);
@@ -88,12 +88,12 @@ export default function TenantMaintenance({ tenant, property, requests }) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    await base44.entities.MaintenanceRequest.create({
+    await api.entities.MaintenanceRequest.create({
       ...formData,
-      tenant_id: tenant.id,
-      property_id: property?.id,
-      status: 'submitted',
-      owner_id: property?.owner_id
+      tenant: tenant.id,
+      property: property?.id,
+      issue_description: formData.title || formData.description || '',
+      status: 'submitted'
     });
 
     toast.success('Maintenance request submitted!');

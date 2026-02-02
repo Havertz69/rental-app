@@ -1,60 +1,42 @@
-import db from '../lib/database.js';
+import { api } from '../api/apiClient.js';
 
 class Property {
-  static async create(propertyData) {
-    const [property] = await db('properties').insert(propertyData).returning('*');
-    return property;
+  static async filter(filters) {
+    return api.entities.Property.filter(filters);
+  }
+
+  static async create(data) {
+    return api.entities.Property.create(data);
   }
 
   static async findByOwner(ownerId) {
-    return await db('properties').where({ owner_id: ownerId }).select('*');
+    return api.entities.Property.filter({ owner_id: ownerId });
   }
 
   static async findById(id) {
-    const [property] = await db('properties').where({ id }).first();
-    return property;
+    const list = await api.entities.Property.filter({ id });
+    return list && list.length ? list[0] : null;
   }
 
-  static async update(id, propertyData) {
-    const [property] = await db('properties').where({ id }).update(propertyData).returning('*');
-    return property;
+  static async update(id, data) {
+    return api.entities.Property.update(id, data);
   }
 
   static async delete(id) {
-    return await db('properties').where({ id }).del();
+    return api.entities.Property.delete(id);
   }
 
   static async getAll() {
-    return await db('properties').select('*');
+    return api.entities.Property.filter({});
   }
 
   static async getStats(ownerId) {
-    const stats = await db('properties')
-      .where({ owner_id: ownerId })
-      .select(
-        db.raw('COUNT(*) as total'),
-        db.raw('COUNT(CASE WHEN status = ? THEN 1 END) as occupied', ['occupied']),
-        db.raw('COUNT(CASE WHEN status = ? THEN 1 END) as available', ['available']),
-        db.raw('SUM(monthly_rent) as potential_revenue')
-      )
-      .first();
-    
-    return stats;
+    return api.entities.Property.getStats(ownerId);
   }
 
   static async getTopPerformers(ownerId, limit = 5) {
-    return await db('properties')
-      .leftJoin('payments', 'properties.id', '=', 'payments.property_id')
-      .where({ 'properties.owner_id': ownerId, 'payments.status': 'paid' })
-      .select(
-        'properties.*',
-        db.raw('SUM(payments.amount) as total_revenue'),
-        db.raw('COUNT(payments.id) as payment_count')
-      )
-      .groupBy('properties.id')
-      .orderBy('total_revenue', 'desc')
-      .limit(limit);
+    return api.entities.Property.getTopPerformers(ownerId, limit);
   }
 }
 
-export default Property;
+export default Property; 

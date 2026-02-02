@@ -85,8 +85,8 @@ export default function MaintenanceForm({ request, open, onClose, onSave }) {
     }));
   };
 
-  const filteredTenants = formData.property_id 
-    ? tenants.filter(t => t.property_id === formData.property_id)
+  const filteredTenants = (formData.property_id ?? formData.property)
+    ? tenants.filter(t => (t.property ?? t.property_id) === (formData.property_id ?? formData.property))
     : tenants;
 
   const handleSubmit = async (e) => {
@@ -94,13 +94,18 @@ export default function MaintenanceForm({ request, open, onClose, onSave }) {
     setIsSubmitting(true);
 
     const user = await api.auth.me();
-    const dataToSave = { ...formData, owner_id: user.email };
-    
+    const payload = {
+      ...formData,
+      owner_id: user.email,
+      property: formData.property_id || formData.property,
+      tenant: formData.tenant_id || formData.tenant,
+      issue_description: formData.title || formData.issue_description || formData.description || ''
+    };
     if (request?.id) {
-      await api.entities.MaintenanceRequest.update(request.id, dataToSave);
+      await api.entities.MaintenanceRequest.update(request.id, payload);
       toast.success('Request updated');
     } else {
-      await api.entities.MaintenanceRequest.create(dataToSave);
+      await api.entities.MaintenanceRequest.create(payload);
       toast.success('Request created');
     }
     onSave();

@@ -79,10 +79,8 @@ export default function PaymentForm({ payment, open, onClose, onSave }) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const user = await api.auth.me();
     const dataToSave = {
       ...formData,
-      owner_id: user.email,
       payment_date: formData.paid_date || formData.due_date,
       tenant: formData.tenant_id || formData.tenant,
       property: formData.property_id || formData.property

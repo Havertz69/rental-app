@@ -68,8 +68,48 @@ class Tenant(models.Model):
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=30, blank=True)
-    property = models.ForeignKey(Property, on_delete=models.SET_NULL, null=True, blank=True, related_name='tenants')
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tenants',
+    )
+    # Basic activation flag used throughout the backend
     active = models.BooleanField(default=True)
+
+    # Extended tenancy/lease metadata used by the frontend
+    unit_number = models.CharField(max_length=20, blank=True)
+    lease_start = models.DateField(null=True, blank=True)
+    lease_end = models.DateField(null=True, blank=True)
+    monthly_rent = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=0,
+    )
+    security_deposit = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=0,
+    )
+    emergency_contact_name = models.CharField(max_length=200, blank=True)
+    emergency_contact_phone = models.CharField(max_length=50, blank=True)
+    notes = models.TextField(blank=True)
+    profile_image = models.URLField(blank=True)
+    TENANT_STATUS = [
+        ('active', 'Active'),
+        ('pending', 'Pending'),
+        ('past', 'Past Tenant'),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=TENANT_STATUS,
+        default='active',
+    )
     
     # AI-relevant fields
     budget_min = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -94,6 +134,7 @@ class Payment(models.Model):
         ('paid', 'Paid'),
         ('late', 'Late'),
         ('overdue', 'Overdue'),
+        ('partial', 'Partial'),
     ]
     
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='payments')
@@ -102,6 +143,19 @@ class Payment(models.Model):
     due_date = models.DateField(default=default_due_date)
     payment_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default='pending')
+
+    # Extended payment metadata used in the UI
+    payment_method = models.CharField(
+        max_length=30,
+        blank=True,
+        default='bank_transfer',
+    )
+    payment_type = models.CharField(
+        max_length=30,
+        blank=True,
+        default='rent',
+    )
+    notes = models.TextField(blank=True)
     
     # AI prediction fields
     late_payment_probability = models.FloatField(default=0.0)  # AI-calculated
@@ -126,6 +180,24 @@ class MaintenanceRequest(models.Model):
     property = models.ForeignKey(Property, on_delete=models.SET_NULL, null=True, blank=True, related_name='maintenance_requests')
     issue_description = models.TextField()
     status = models.CharField(max_length=20, choices=MAINTENANCE_STATUS, default='submitted')
+
+    # Business/UX fields
+    category = models.CharField(max_length=50, blank=True, default='other')
+    priority = models.CharField(max_length=20, blank=True, default='medium')
+    scheduled_date = models.DateField(null=True, blank=True)
+    cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=0,
+    )
+    vendor_name = models.CharField(max_length=200, blank=True)
+    vendor_phone = models.CharField(max_length=50, blank=True)
+    resolution_notes = models.TextField(blank=True)
+    images = models.JSONField(default=list, blank=True)
+
+    # AI-calculated fields
     priority_score = models.FloatField(default=0.0)  # AI-calculated urgency
     completion_time_predicted = models.IntegerField(default=0)  # AI-predicted hours
     created_at = models.DateTimeField(auto_now_add=True)

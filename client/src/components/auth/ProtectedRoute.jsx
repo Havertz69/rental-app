@@ -20,14 +20,20 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
   // Check role-based access
   if (allowedRoles.length > 0) {
-    // Determine role based on is_staff field
-    const userRole = user?.is_staff ? 'admin' : 'tenant';
-    
-    if (!userRole) {
-      return <Navigate to="/login" state={{ from: location }} replace />;
+    // Prefer backend-computed user_type if available
+    const rawRole = user?.user_type;
+    let userRole = null;
+
+    if (rawRole === 'super_admin' || rawRole === 'admin') {
+      userRole = 'admin';
+    } else if (rawRole === 'tenant' || rawRole === 'user') {
+      userRole = 'tenant';
+    } else if (user?.is_staff) {
+      // Fallback to staff flag if user_type is missing
+      userRole = 'admin';
     }
-    
-    if (!allowedRoles.includes(userRole)) {
+
+    if (!userRole || !allowedRoles.includes(userRole)) {
       return <Navigate to="/login" state={{ from: location }} replace />;
     }
   }

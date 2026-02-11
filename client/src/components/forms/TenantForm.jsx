@@ -66,9 +66,12 @@ export default function TenantForm({ tenant, open, onClose, onSave }) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const user = await api.auth.me();
-    const dataToSave = { ...formData, owner_id: user.email };
-    
+    const dataToSave = {
+      ...formData,
+      // map UI-centric property_id to backend FK field name
+      property: formData.property_id || formData.property,
+    };
+
     if (tenant?.id) {
       await api.entities.Tenant.update(tenant.id, dataToSave);
       toast.success('Tenant updated');

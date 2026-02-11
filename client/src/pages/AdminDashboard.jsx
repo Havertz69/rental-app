@@ -64,7 +64,13 @@ const AdminDashboard = () => {
     queryKey: ['admin-dashboard-stats'],
     queryFn: async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/dashboard/stats/');
+        const tokens = localStorage.getItem('authTokens');
+        const response = await fetch('http://localhost:8000/api/dashboard/stats/', {
+          headers: {
+            'Authorization': tokens ? `Bearer ${JSON.parse(tokens).access}` : '',
+            'Content-Type': 'application/json',
+          },
+        });
         if (!response.ok) {
           throw new Error('Stats endpoint not available');
         }
@@ -136,7 +142,13 @@ const AdminDashboard = () => {
     queryKey: ['admin-activity'],
     queryFn: async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/activity/recent/');
+        const tokens = localStorage.getItem('authTokens');
+        const response = await fetch('http://localhost:8000/api/activity/recent/', {
+          headers: {
+            'Authorization': tokens ? `Bearer ${JSON.parse(tokens).access}` : '',
+            'Content-Type': 'application/json',
+          },
+        });
         if (!response.ok) {
           throw new Error('Activity endpoint not available');
         }
@@ -152,7 +164,13 @@ const AdminDashboard = () => {
     queryKey: ['ai-insights'],
     queryFn: async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/ai/insights/');
+        const tokens = localStorage.getItem('authTokens');
+        const response = await fetch('http://localhost:8000/api/ai/insights/', {
+          headers: {
+            'Authorization': tokens ? `Bearer ${JSON.parse(tokens).access}` : '',
+            'Content-Type': 'application/json',
+          },
+        });
         if (!response.ok) {
           throw new Error('AI insights endpoint not available');
         }
@@ -307,8 +325,7 @@ const AdminDashboard = () => {
           bedrooms: parseInt(newProperty.bedrooms),
           bathrooms: parseInt(newProperty.bathrooms),
           square_feet: parseInt(newProperty.square_feet),
-          description: newProperty.description,
-          amenities: newProperty.amenities.split(',').map(a => a.trim()).filter(a => a)
+          // description and amenities are UI-only for now
         })
       });
       
@@ -405,9 +422,13 @@ const AdminDashboard = () => {
 
   const handleUserAction = async (userId, action) => {
     try {
+      const tokens = localStorage.getItem('authTokens');
       const response = await fetch(`http://localhost:8000/api/users/${userId}/${action}/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Authorization': tokens ? `Bearer ${JSON.parse(tokens).access}` : '',
+          'Content-Type': 'application/json',
+        },
       });
       
       if (response.ok) {

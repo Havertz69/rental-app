@@ -10,7 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import transaction
 import logging
 
-from .permissions import IsOwnerOrAdmin
+from .permissions import IsOwnerOrAdmin, IsStaffUser, IsSuperAdmin
 
 logger = logging.getLogger(__name__)
 
@@ -83,14 +83,19 @@ class EmailTokenObtainPairView(TokenObtainPairView):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def me(request):
     # Return authenticated user info
     if request.user and request.user.is_authenticated:
         user = request.user
-        
-        # Determine user type based on staff status and tenant record
-        user_type = 'admin' if user.is_staff else 'tenant'
+
+        # Determine user type based on staff/superuser status and tenant record
+        if user.is_superuser:
+            user_type = 'super_admin'
+        elif user.is_staff:
+            user_type = 'admin'
+        else:
+            user_type = 'tenant'
         
         # Check if user has a tenant record
         try:
@@ -101,11 +106,12 @@ def me(request):
                 user_type = 'user'  # Regular user without tenant record
         
         response_data = {
-            'email': user.email, 
-            'full_name': user.get_full_name(), 
-            'id': user.id, 
+            'email': user.email,
+            'full_name': user.get_full_name(),
+            'id': user.id,
             'is_staff': user.is_staff,
-            'user_type': user_type
+            'is_superuser': user.is_superuser,
+            'user_type': user_type,
         }
         
         # Add tenant-specific data if user is tenant
@@ -124,11 +130,21 @@ def me(request):
                 response_data['tenant_error'] = 'Tenant record not found'
         
         return Response(response_data)
-    return Response({'email': None, 'full_name': None, 'id': None, 'is_staff': False, 'user_type': None})
+    return Response(
+        {
+            'email': None,
+            'full_name': None,
+            'id': None,
+            'is_staff': False,
+            'is_superuser': False,
+            'user_type': None,
+        },
+        status=status.HTTP_401_UNAUTHORIZED,
+    )
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsStaffUser])
 def create_tenant_user(request):
     """
     Create a new tenant user and assign to a property
@@ -159,7 +175,8 @@ def create_tenant_user(request):
             }, status=status.HTTP_404_NOT_FOUND)
         
         with transaction.atomic():
-            # Create Django user
+            # Create Django user linked to this tenant account.
+            # Only staff (admins/landlords) can create full tenant users.
             user = User.objects.create_user(
                 username=data['email'],
                 email=data['email'],
@@ -187,7 +204,7 @@ def create_tenant_user(request):
                 total_payments_made=0
             )
             
-            # Generate JWT tokens
+            # Generate JWT tokens so the tenant can log in immediately
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
             
@@ -221,7 +238,7 @@ def create_tenant_user(request):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsSuperAdmin])
 def create_admin_user(request):
     """
     Create a new admin user (superuser)
@@ -244,7 +261,8 @@ def create_admin_user(request):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         with transaction.atomic():
-            # Create Django superuser
+            # Create Django superuser.
+            # This endpoint is restricted to existing superusers only
             user = User.objects.create_superuser(
                 username=data['email'],
                 email=data['email'],

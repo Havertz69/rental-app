@@ -9,7 +9,21 @@ class PropertySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Property
-        fields = ['id', 'name', 'location', 'price', 'bedrooms', 'available', 'status', 'address', 'monthly_rent']
+        # Expose core property attributes plus computed helpers
+        fields = [
+            'id',
+            'name',
+            'property_type',
+            'location',
+            'price',
+            'bedrooms',
+            'bathrooms',
+            'square_feet',
+            'available',
+            'status',
+            'address',
+            'monthly_rent',
+        ]
 
     def get_status(self, obj):
         return 'available' if obj.available else 'occupied'
@@ -19,25 +33,56 @@ class PropertySerializer(serializers.ModelSerializer):
 
 
 class TenantSerializer(serializers.ModelSerializer):
-    status = serializers.SerializerMethodField()
     user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Tenant
-        fields = ['id', 'first_name', 'last_name', 'email', 'phone', 'property', 'active', 'status', 'user']
-
-    def get_status(self, obj):
-        return 'active' if obj.active else 'inactive'
+        # Expose core identity plus extended tenancy fields used by the UI
+        fields = [
+            'id',
+            'first_name',
+            'last_name',
+            'email',
+            'phone',
+            'property',
+            'active',
+            'status',
+            'unit_number',
+            'lease_start',
+            'lease_end',
+            'monthly_rent',
+            'security_deposit',
+            'emergency_contact_name',
+            'emergency_contact_phone',
+            'notes',
+            'profile_image',
+            'user',
+        ]
 
 
 class PaymentSerializer(serializers.ModelSerializer):
-    due_date = serializers.DateField(source='payment_date', read_only=True)
     paid_date = serializers.SerializerMethodField()
     created_date = serializers.DateTimeField(source='created_at', read_only=True)
 
     class Meta:
         model = Payment
-        fields = ['id', 'tenant', 'property', 'amount', 'payment_date', 'status', 'created_at', 'due_date', 'paid_date', 'created_date']
+        # Expose both scheduled due date and actual payment date,
+        # plus extended metadata used in the financial UI.
+        fields = [
+            'id',
+            'tenant',
+            'property',
+            'amount',
+            'due_date',
+            'payment_date',
+            'status',
+            'payment_method',
+            'payment_type',
+            'notes',
+            'created_at',
+            'paid_date',
+            'created_date',
+        ]
 
     def get_paid_date(self, obj):
         return obj.payment_date if obj.status == 'paid' else None
@@ -49,7 +94,26 @@ class MaintenanceRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MaintenanceRequest
-        fields = ['id', 'tenant', 'property', 'issue_description', 'status', 'created_at', 'title', 'created_date']
+        # Include extended fields that the frontend expects (category, priority,
+        # scheduling, vendor details, cost and images).
+        fields = [
+            'id',
+            'tenant',
+            'property',
+            'issue_description',
+            'status',
+            'category',
+            'priority',
+            'scheduled_date',
+            'cost',
+            'vendor_name',
+            'vendor_phone',
+            'resolution_notes',
+            'images',
+            'created_at',
+            'title',
+            'created_date',
+        ]
 
     def get_title(self, obj):
         return obj.issue_description or ''

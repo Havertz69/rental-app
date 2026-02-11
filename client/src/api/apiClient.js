@@ -95,15 +95,14 @@ export const api = {
       }
     },
     login: async ({ email, password }) => {
-      // Use the new auth/login endpoint
-      // Try email as username first, then try as email field
-      const data = await apiFetch('/auth/login/', { 
-        method: 'POST', 
-        body: { 
-          username: email, 
+      // Use the JWT token endpoint with email-based authentication
+      const data = await apiFetch('/auth/token/', {
+        method: 'POST',
+        body: {
+          username: email,
           email: email,
-          password 
-        } 
+          password,
+        },
       });
       // backend returns access/refresh tokens
       if (data && data.access) {

@@ -93,10 +93,8 @@ export default function MaintenanceForm({ request, open, onClose, onSave }) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const user = await api.auth.me();
     const payload = {
       ...formData,
-      owner_id: user.email,
       property: formData.property_id || formData.property,
       tenant: formData.tenant_id || formData.tenant,
       issue_description: formData.title || formData.issue_description || formData.description || ''

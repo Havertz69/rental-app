@@ -134,13 +134,19 @@ export default function PropertyForm({ property, open, onClose, onSave }) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const user = await api.auth.me();
+    // Only send fields that the backend Property model/serializer understands
     const dataToSave = {
-      ...formData,
-      owner_id: user.email,
-      price: formData.monthly_rent ?? formData.price,
+      name: formData.name,
+      property_type: formData.property_type,
       location: formData.address ?? formData.location,
-      available: formData.status != null ? formData.status === 'available' : (formData.available ?? true)
+      price: formData.monthly_rent ?? formData.price,
+      bedrooms: formData.bedrooms,
+      bathrooms: formData.bathrooms,
+      square_feet: formData.square_feet,
+      available:
+        formData.status != null
+          ? formData.status === 'available'
+          : formData.available ?? true,
     };
     if (property?.id) {
       await api.entities.Property.update(property.id, dataToSave);

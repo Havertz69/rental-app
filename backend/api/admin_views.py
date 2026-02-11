@@ -31,8 +31,9 @@ def dashboard_stats(request):
         
         # Property statistics
         total_properties = Property.objects.count()
-        occupied_properties = Property.objects.filter(status='occupied').count()
-        available_properties = Property.objects.filter(status='available').count()
+        # In this schema a property is considered "occupied" when `available` is False
+        occupied_properties = Property.objects.filter(available=False).count()
+        available_properties = Property.objects.filter(available=True).count()
         occupancy_rate = (occupied_properties / total_properties * 100) if total_properties > 0 else 0
         
         # Financial statistics
@@ -51,7 +52,8 @@ def dashboard_stats(request):
         revenue_growth = ((monthly_revenue - last_month_revenue) / last_month_revenue * 100) if last_month_revenue > 0 else 0
         
         # Maintenance statistics
-        pending_maintenance = MaintenanceRequest.objects.filter(status='pending').count()
+        # "submitted" is the initial state for maintenance requests
+        pending_maintenance = MaintenanceRequest.objects.filter(status='submitted').count()
         in_progress_maintenance = MaintenanceRequest.objects.filter(status='in_progress').count()
         
         # AI predictions
@@ -136,7 +138,7 @@ def ai_insights(request):
         # Maintenance predictions
         urgent_maintenance = MaintenanceRequest.objects.filter(
             priority_score__gt=7.0,
-            status='pending'
+            status='submitted',
         ).count()
         
         return Response({
@@ -408,23 +410,26 @@ def analytics_data(request):
         # Occupancy trends
         occupancy_data = []
         for i in range(6):
-            month_start = (timezone.now() - timedelta(days=30*i)).replace(day=1)
+            month_start = (timezone.now() - timedelta(days=30 * i)).replace(day=1)
             month_end = month_start + timedelta(days=32)
             month_end = month_end.replace(day=1) - timedelta(days=1)
-            
+
             total_props = Property.objects.count()
+            # Treat properties marked as unavailable as occupied during this window
             occupied_props = Property.objects.filter(
-                status='occupied',
+                available=False,
                 updated_at__gte=month_start,
-                updated_at__lte=month_end
+                updated_at__lte=month_end,
             ).count()
-            
+
             occupancy_rate = (occupied_props / total_props * 100) if total_props > 0 else 0
-            
-            occupancy_data.append({
-                'month': month_start.strftime('%b'),
-                'occupancy': round(occupancy_rate, 1)
-            })
+
+            occupancy_data.append(
+                {
+                    'month': month_start.strftime('%b'),
+                    'occupancy': round(occupancy_rate, 1),
+                }
+            )
         
         occupancy_data.reverse()
         
@@ -439,17 +444,23 @@ def analytics_data(request):
         # Property performance
         property_performance = []
         for prop in Property.objects.all()[:10]:  # Top 10 properties
-            total_revenue = Payment.objects.filter(
-                property=prop,
-                status='paid'
-            ).aggregate(total=Sum('amount'))['total'] or 0
-            
-            property_performance.append({
-                'name': prop.name,
-                'revenue': float(total_revenue),
-                'occupancy': 100 if prop.status == 'occupied' else 0,
-                'price': float(prop.price)
-            })
+            total_revenue = (
+                Payment.objects.filter(
+                    property=prop,
+                    status='paid',
+                ).aggregate(total=Sum('amount'))['total']
+                or 0
+            )
+
+            property_performance.append(
+                {
+                    'name': prop.name,
+                    'revenue': float(total_revenue),
+                    # Occupancy is 100% when the property is currently not available
+                    'occupancy': 100 if not prop.available else 0,
+                    'price': float(prop.price),
+                }
+            )
         
         return Response({
             'revenue_trends': revenue_data,
